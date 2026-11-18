@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+runs/
+*.pt
+models/*.onnx
+data/*.npy
+data/enroll/*
+!data/enroll/.gitkeep
+data/charlie*/
+config/local.yaml
+.pytest_cache/

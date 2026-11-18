@@ -1,0 +1,83 @@
+# ---------------------------------------------------------------------------
+# spot-follow configuration. Copy to config/local.yaml and edit; pass it with
+#   python scripts/run_follow.py --config config/local.yaml
+# Command-line flags override the matching values here.
+# ---------------------------------------------------------------------------
+
+robot:
+  hostname: 192.168.80.3        # Spot's own WiFi AP address. Use the CORE/payload IP if on a lab network.
+  take_lease: false             # true = forcibly take the body lease from the tablet (use with care)
+  own_estop: false              # true = this program registers its own software E-Stop (replaces the tablet's!)
+  estop_timeout_s: 9.0
+  sit_and_power_off_at_exit: true
+
+# Body cameras to look through. Using all five gives ~360 degree coverage.
+cameras: [frontleft, frontright, left, right, back]
+image_quality: 70               # JPEG quality requested from the robot (lower = faster over WiFi)
+
+detector:
+  # person      : follow the nearest person (no identity check)
+  # face        : follow ONE specific person, identified by face (run scripts/enroll_target.py first)
+  # custom      : follow a class from your own trained YOLO model (e.g. Charlie the Charger)
+  # open_vocab  : zero-shot YOLO-World with text prompts (try this for Charlie before training)
+  mode: person
+  model: yolov8n.pt             # person/face mode detector; auto-downloads on first use
+  confidence: 0.45
+  imgsz: 640
+  device: ""                    # "" = auto, or "cpu", "cuda:0", "mps" (Apple Silicon)
+  person_class: person
+  custom_model: models/charlie.pt
+  custom_class_names: [charlie] # classes in the custom model that count as the target
+  open_vocab_model: yolov8s-worldv2.pt
+  open_vocab_prompts: ["horse mascot costume", "person in a mascot costume"]
+
+face:
+  target_embedding: data/target_face.npy
+  detector_model: models/face_detection_yunet_2023mar.onnx
+  recognizer_model: models/face_recognition_sface_2021dec.onnx
+  match_threshold: 0.36         # SFace cosine similarity; >= this is "same person" (0.363 is OpenCV's recommendation)
+  reject_threshold: 0.20        # a clearly visible face below this on the locked track counts against it
+  reject_frames: 3              # this many rejects in a row drops the lock (someone else stepped in)
+  head_upscale: 2.0             # upscale head crops so distant faces are detectable
+
+tracking:
+  confirm_frames: 3             # hits needed before Spot starts moving toward a new target
+  confirm_window_s: 2.0
+  gate_distance_m: 1.2          # max jump (beyond prediction) to still be "the same" target
+  merge_distance_m: 0.6         # detections closer than this from different cameras are fused
+  lost_timeout_s: 1.5           # FOLLOW -> REACQUIRE after this long unseen
+  reacquire_timeout_s: 6.0      # REACQUIRE -> SEARCH after this long unseen
+  smoothing_alpha: 0.5          # 0..1, weight of the new measurement in the position filter
+  appearance_weight: 0.5        # metres of "distance credit" for a perfect appearance match
+
+range:
+  use_depth: true               # use Spot's stereo depth aligned to each camera
+  assumed_target_height_m: 1.7  # fallback range from box height when depth is missing
+  min_range_m: 0.3
+  max_range_m: 8.0
+
+follow:
+  standoff_m: 1.5               # how far behind the target Spot stays
+  deadband_m: 0.3               # no walking while within standoff +/- deadband (just turn to face)
+  allow_backoff: false          # true = step back when the target comes closer than standoff
+  max_lin_vel: 0.8              # m/s  (Spot max is ~1.6; keep it low indoors)
+  max_ang_vel: 0.8              # rad/s
+  command_duration_s: 1.0       # each command expires after this; if the program hangs, Spot stops
+  leash_radius_m: 10.0          # never send a goal farther than this from where Spot started
+  body_height: 0.0
+  obstacle_padding_m: 0.1
+  min_goal_change_m: 0.15       # don't re-plan for tiny target jitter
+  min_heading_change_rad: 0.15
+
+search:
+  rotate_vel: 0.35              # rad/s while looking around
+  rotate_step_s: 2.0            # turn this long ...
+  pause_s: 1.0                  # ... then stand still this long (sharp images)
+  max_search_s: 120             # give up and stand still after this long (0 = never)
+
+loop_hz: 5
+
+viz:
+  show: false                   # open an OpenCV window with all camera views
+  save_dir: ""                  # write annotated frames here (e.g. runs/today)
+  save_every_n: 5

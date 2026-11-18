@@ -1,0 +1,10 @@
+# Boston Dynamics Spot SDK (match your robot's software version if you can; 4.x and 5.x both work)
+bosdyn-client>=4.0
+bosdyn-api>=4.0
+# Vision
+numpy>=1.24
+opencv-python>=4.8          # includes YuNet/SFace face models API and cv2.fisheye
+ultralytics>=8.2            # YOLO + YOLO-World; pulls in PyTorch
+pyyaml>=6.0
+# Dev
+pytest>=7.0
